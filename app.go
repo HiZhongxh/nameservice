@@ -7,7 +7,6 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
-	pvm "github.com/tendermint/tendermint/privval"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
@@ -18,17 +17,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	//distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	"github.com/cosmos/cosmos-sdk/x/genaccounts"
-	//"github.com/cosmos/cosmos-sdk/x/genutil"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/params"
-	//"github.com/cosmos/cosmos-sdk/x/slashing"
-	//"github.com/cosmos/cosmos-sdk/x/staking"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
+	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/supply"
 
 	"github.com/HiZhongxh/nameservice/x/nameservice"
-	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
 )
 
 const appName = "nameservice"
@@ -43,13 +40,13 @@ var (
 	// NewBasicManager is in charge of setting up basic module elemnets
 	ModuleBasics = module.NewBasicManager(
 		genaccounts.AppModuleBasic{},
-		//genutil.AppModuleBasic{},
+		genutil.AppModuleBasic{},
 		auth.AppModuleBasic{},
 		bank.AppModuleBasic{},
-		//staking.AppModuleBasic{},
-		//distr.AppModuleBasic{},
+		staking.AppModuleBasic{},
+		distr.AppModuleBasic{},
 		params.AppModuleBasic{},
-		//slashing.AppModuleBasic{},
+		slashing.AppModuleBasic{},
 		supply.AppModuleBasic{},
 
 		nameservice.AppModule{},
@@ -57,9 +54,9 @@ var (
 	// account permissions
 	maccPerms = map[string][]string{
 		auth.FeeCollectorName:     nil,
-		//distr.ModuleName:          nil,
-		//staking.BondedPoolName:    {supply.Burner, supply.Staking},
-		//staking.NotBondedPoolName: {supply.Burner, supply.Staking},
+		distr.ModuleName:          nil,
+		staking.BondedPoolName:    {supply.Burner, supply.Staking},
+		staking.NotBondedPoolName: {supply.Burner, supply.Staking},
 	}
 )
 
@@ -83,9 +80,9 @@ type nameServiceApp struct {
 	// Keepers
 	accountKeeper  auth.AccountKeeper
 	bankKeeper     bank.Keeper
-	//stakingKeeper  staking.Keeper
-	//slashingKeeper slashing.Keeper
-	//distrKeeper    distr.Keeper
+	stakingKeeper  staking.Keeper
+	slashingKeeper slashing.Keeper
+	distrKeeper    distr.Keeper
 	supplyKeeper   supply.Keeper
 	paramsKeeper   params.Keeper
 	nsKeeper       nameservice.Keeper
@@ -107,10 +104,10 @@ func NewNameServiceApp(
 
 	bApp.SetAppVersion(version.Version)
 
-	keys := sdk.NewKVStoreKeys(bam.MainStoreKey, auth.StoreKey,
-		supply.StoreKey, params.StoreKey, nameservice.StoreKey)
+	keys := sdk.NewKVStoreKeys(bam.MainStoreKey, auth.StoreKey, staking.StoreKey,
+		supply.StoreKey, distr.StoreKey, slashing.StoreKey, params.StoreKey, nameservice.StoreKey)
 
-	tkeys := sdk.NewTransientStoreKeys(params.TStoreKey)
+	tkeys := sdk.NewTransientStoreKeys(staking.TStoreKey, params.TStoreKey)
 
 	// Here you initialize your application with the store keys it requires
 	var app = &nameServiceApp{
@@ -125,9 +122,9 @@ func NewNameServiceApp(
 	// Set specific supspaces
 	authSubspace := app.paramsKeeper.Subspace(auth.DefaultParamspace)
 	bankSupspace := app.paramsKeeper.Subspace(bank.DefaultParamspace)
-	//stakingSubspace := app.paramsKeeper.Subspace(staking.DefaultParamspace)
-	//distrSubspace := app.paramsKeeper.Subspace(distr.DefaultParamspace)
-	//slashingSubspace := app.paramsKeeper.Subspace(slashing.DefaultParamspace)
+	stakingSubspace := app.paramsKeeper.Subspace(staking.DefaultParamspace)
+	distrSubspace := app.paramsKeeper.Subspace(distr.DefaultParamspace)
+	slashingSubspace := app.paramsKeeper.Subspace(slashing.DefaultParamspace)
 
 	// The AccountKeeper handles address -> account lookups
 	app.accountKeeper = auth.NewAccountKeeper(
@@ -154,42 +151,42 @@ func NewNameServiceApp(
 		maccPerms,
 	)
 
-	//// The staking keeper
-	//stakingKeeper := staking.NewKeeper(
-	//	app.cdc,
-	//	keys[staking.StoreKey],
-	//	tkeys[staking.TStoreKey],
-	//	app.supplyKeeper,
-	//	stakingSubspace,
-	//	staking.DefaultCodespace,
-	//)
+	// The staking keeper
+	stakingKeeper := staking.NewKeeper(
+		app.cdc,
+		keys[staking.StoreKey],
+		tkeys[staking.TStoreKey],
+		app.supplyKeeper,
+		stakingSubspace,
+		staking.DefaultCodespace,
+	)
 
-	//app.distrKeeper = distr.NewKeeper(
-	//	app.cdc,
-	//	keys[distr.StoreKey],
-	//	distrSubspace,
-	//	&stakingKeeper,
-	//	app.supplyKeeper,
-	//	distr.DefaultCodespace,
-	//	auth.FeeCollectorName,
-	//	app.ModuleAccountAddrs(),
-	//)
-	//
-	//app.slashingKeeper = slashing.NewKeeper(
-	//	app.cdc,
-	//	keys[slashing.StoreKey],
-	//	&stakingKeeper,
-	//	slashingSubspace,
-	//	slashing.DefaultCodespace,
-	//)
-	//
-	//// register the staking hooks
-	//// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
-	//app.stakingKeeper = *stakingKeeper.SetHooks(
-	//	staking.NewMultiStakingHooks(
-	//		app.distrKeeper.Hooks(),
-	//		app.slashingKeeper.Hooks()),
-	//)
+	app.distrKeeper = distr.NewKeeper(
+		app.cdc,
+		keys[distr.StoreKey],
+		distrSubspace,
+		&stakingKeeper,
+		app.supplyKeeper,
+		distr.DefaultCodespace,
+		auth.FeeCollectorName,
+		app.ModuleAccountAddrs(),
+	)
+
+	app.slashingKeeper = slashing.NewKeeper(
+		app.cdc,
+		keys[slashing.StoreKey],
+		&stakingKeeper,
+		slashingSubspace,
+		slashing.DefaultCodespace,
+	)
+
+	// register the staking hooks
+	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
+	app.stakingKeeper = *stakingKeeper.SetHooks(
+		staking.NewMultiStakingHooks(
+			app.distrKeeper.Hooks(),
+			app.slashingKeeper.Hooks()),
+	)
 
 	// The NameserviceKeeper is the Keeper from the module for this tutorial
 	// It handles interactions with the namestore
@@ -201,32 +198,32 @@ func NewNameServiceApp(
 
 	app.mm = module.NewManager(
 		genaccounts.NewAppModule(app.accountKeeper),
-		//genutil.NewAppModule(app.accountKeeper, app.stakingKeeper, app.BaseApp.DeliverTx),
+		genutil.NewAppModule(app.accountKeeper, app.stakingKeeper, app.BaseApp.DeliverTx),
 		auth.NewAppModule(app.accountKeeper),
 		bank.NewAppModule(app.bankKeeper, app.accountKeeper),
 		nameservice.NewAppModule(app.nsKeeper, app.bankKeeper),
 		supply.NewAppModule(app.supplyKeeper, app.accountKeeper),
-		//distr.NewAppModule(app.distrKeeper, app.supplyKeeper),
-		//slashing.NewAppModule(app.slashingKeeper, app.stakingKeeper),
-		//staking.NewAppModule(app.stakingKeeper, app.distrKeeper, app.accountKeeper, app.supplyKeeper),
+		distr.NewAppModule(app.distrKeeper, app.supplyKeeper),
+		slashing.NewAppModule(app.slashingKeeper, app.stakingKeeper),
+		staking.NewAppModule(app.stakingKeeper, app.distrKeeper, app.accountKeeper, app.supplyKeeper),
 	)
 
-	//app.mm.SetOrderBeginBlockers(distr.ModuleName, slashing.ModuleName)
-	//app.mm.SetOrderEndBlockers(staking.ModuleName)
+	app.mm.SetOrderBeginBlockers(distr.ModuleName, slashing.ModuleName)
+	app.mm.SetOrderEndBlockers(staking.ModuleName)
 
 	// Sets the order of Genesis - Order matters, genutil is to always come last
 	// NOTE: The genutils moodule must occur after staking so that pools are
 	// properly initialized with tokens from genesis accounts.
 	app.mm.SetOrderInitGenesis(
 		genaccounts.ModuleName,
-		//distr.ModuleName,
-		//staking.ModuleName,
+		distr.ModuleName,
+		staking.ModuleName,
 		auth.ModuleName,
 		bank.ModuleName,
-		//slashing.ModuleName,
+		slashing.ModuleName,
 		nameservice.ModuleName,
 		supply.ModuleName,
-		//genutil.ModuleName,
+		genutil.ModuleName,
 	)
 
 	// register all module routes and module queriers
@@ -266,49 +263,14 @@ func NewDefaultGenesisState() GenesisState {
 }
 
 func (app *nameServiceApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
-	config := server.NewDefaultContext().Config
-	config.SetRoot(DefaultNodeHome)
-
-	server.UpgradeOldPrivValFile(config)
-
-	_, _, err := genutil.InitializeNodeValidatorFiles(config)
-	if err != nil {
-		panic(err)
-	}
-
-	/*
-		---------------------NOTICE-----------------------
-		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-
-		The code below is a hack to override the
-		functionality of tendermint. It is done here like
-		this so that you can focus on building fun custom
-		modules instead of all the necessary plumbing
-		required when building a production-ready app with
-		proof-of-stake. Don't worry about it now but
-		PLEASE NOTE that this is NOT BEST PRACTICE!
-
-		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		---------------------------------------------------
-	*/
-	privValidator := pvm.LoadOrGenFilePV(
-		config.PrivValidatorKeyFile(), config.PrivValidatorStateFile())
-	valPubKey := tmtypes.TM2PB.PubKey(privValidator.GetPubKey())
-
-	update := abci.ValidatorUpdate{
-		PubKey: valPubKey,
-		Power:  100}
-
 	var genesisState GenesisState
 
-	err = app.cdc.UnmarshalJSON(req.AppStateBytes, &genesisState)
+	err := app.cdc.UnmarshalJSON(req.AppStateBytes, &genesisState)
 	if err != nil {
 		panic(err)
 	}
 
-	genesis := app.mm.InitGenesis(ctx, genesisState)
-	genesis.Validators = append(genesis.Validators, update)
-	return genesis
+	return app.mm.InitGenesis(ctx, genesisState)
 }
 
 func (app *nameServiceApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
@@ -345,7 +307,7 @@ func (app *nameServiceApp) ExportAppStateAndValidators(forZeroHeight bool, jailW
 		return nil, nil, err
 	}
 
-	//validators = staking.WriteValidators(ctx, app.stakingKeeper)
+	validators = staking.WriteValidators(ctx, app.stakingKeeper)
 
 	return appState, validators, nil
 }
