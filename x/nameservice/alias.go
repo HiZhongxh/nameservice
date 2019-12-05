@@ -9,6 +9,7 @@ const (
 	ModuleName = types.ModuleName
 	RouterKey  = types.RouterKey
 	StoreKey   = types.StoreKey
+	StoreMarketKey = types.StoreMarketKey
 )
 
 var (
@@ -26,8 +27,10 @@ type (
 	Keeper          = keeper.Keeper
 	MsgSetName      = types.MsgSetName
 	MsgBuyName      = types.MsgBuyName
-	//MsgDeleteName   = types.MsgDeleteName
+	MsgDeleteName   = types.MsgDeleteName
+	MsgAuctionName  = types.MsgAuctionName
 	QueryResResolve = types.QueryResResolve
 	QueryResNames   = types.QueryResNames
 	Whois           = types.Whois
+	Auction			= types.Auction
 )

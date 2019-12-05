@@ -13,6 +13,7 @@ const (
 	QueryResolve = "resolve"
 	QueryWhois   = "whois"
 	QueryNames   = "names"
+	QueryAuctionNames = "auctionnames"
 )
 
 // NewQuerier is the module level router for state queries
@@ -25,6 +26,8 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 			return queryWhois(ctx, path[1:], req, keeper)
 		case QueryNames:
 			return queryNames(ctx, req, keeper)
+		case QueryAuctionNames:
+			return queryAuctionNames(ctx, req, keeper)
 		default:
 			return nil, sdk.ErrUnknownRequest("unknown nameservice query endpoint")
 		}
@@ -69,6 +72,24 @@ func queryNames(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (res []by
 	var namesList types.QueryResNames
 
 	iterator := keeper.GetNamesIterator(ctx)
+
+	for ; iterator.Valid(); iterator.Next() {
+		namesList = append(namesList, string(iterator.Key()))
+	}
+
+	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, namesList)
+	if err2 != nil {
+		panic("could not marshal result to JSON")
+	}
+
+	return bz, nil
+}
+
+// nolint: unparam
+func queryAuctionNames(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (res []byte, err sdk.Error) {
+	var namesList types.QueryResNames
+
+	iterator := keeper.GetAuctionNamesIterator(ctx)
 
 	for ; iterator.Valid(); iterator.Next() {
 		namesList = append(namesList, string(iterator.Key()))

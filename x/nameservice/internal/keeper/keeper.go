@@ -10,18 +10,18 @@ import (
 // Keeper maintains the link to data storage and exposes getter/setter methods for the various parts of the state machine
 type Keeper struct {
 	CoinKeeper bank.Keeper
-
 	storeKey  sdk.StoreKey // Unexposed key to access store from sdk.Context
-
+	storeMarketKey  sdk.StoreKey // Unexposed key to access store from sdk.Context
 	cdc *codec.Codec // The wire codec for binary encoding/decoding.
 }
 
 // NewKeeper creates new instances of the nameservice Keeper
-func NewKeeper(coinKeeper bank.Keeper, storeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
+func NewKeeper(coinKeeper bank.Keeper, storeKey sdk.StoreKey, storeMarketKey  sdk.StoreKey, cdc *codec.Codec) Keeper {
 	return Keeper{
-		CoinKeeper: coinKeeper,
-		storeKey:   storeKey,
-		cdc:        cdc,
+		CoinKeeper: 		coinKeeper,
+		storeKey:   		storeKey,
+		storeMarketKey:		storeMarketKey,
+		cdc:        		cdc,
 	}
 }
 
@@ -32,6 +32,12 @@ func (k Keeper) SetWhois(ctx sdk.Context, name string, whois types.Whois) {
 	}
 	store := ctx.KVStore(k.storeKey)
 	store.Set([]byte(name), k.cdc.MustMarshalBinaryBare(whois))
+}
+
+// Delete the entire Whois metadata struct for a name
+func (k Keeper) DeleteWhois(ctx sdk.Context, name string) {
+	store := ctx.KVStore(k.storeKey)
+	store.Delete([]byte(name))
 }
 
 // Gets the entire Whois metadata struct for a name
@@ -91,5 +97,47 @@ func (k Keeper) SetPrice(ctx sdk.Context, name string, price sdk.Coins) {
 // Get an iterator over all names in which the keys are the names and the values are the whois
 func (k Keeper) GetNamesIterator(ctx sdk.Context) sdk.Iterator {
 	store := ctx.KVStore(k.storeKey)
+	return sdk.KVStorePrefixIterator(store, []byte{})
+}
+
+
+// Sets the entire Auction metadata struct for a name
+func (k Keeper) SetAuction(ctx sdk.Context, name string, auction types.Auction) {
+	if auction.Auctor.Empty() {
+		return
+	}
+	store := ctx.KVStore(k.storeMarketKey)
+	store.Set([]byte(name), k.cdc.MustMarshalBinaryBare(auction))
+}
+
+// Delete the entire Auction metadata struct for a name
+func (k Keeper) DeleteAuction(ctx sdk.Context, name string) {
+	store := ctx.KVStore(k.storeMarketKey)
+	store.Delete([]byte(name))
+}
+
+// Gets the entire Auction metadata struct for a name
+func (k Keeper) GetAuction(ctx sdk.Context, name string) types.Auction {
+	store := ctx.KVStore(k.storeMarketKey)
+	if !store.Has([]byte(name)) {
+		return types.NewAuction()
+	}
+	bz := store.Get([]byte(name))
+	var auction types.Auction
+	k.cdc.MustUnmarshalBinaryBare(bz, &auction)
+	return auction
+}
+
+func (k Keeper) NewAuction(ctx sdk.Context, name string, auctor sdk.AccAddress, startingPrice sdk.Coins, height int64) {
+	auction := k.GetAuction(ctx, name)
+	auction.Auctor = auctor
+	auction.StartingPrice = startingPrice
+	auction.DeadHeight = ctx.BlockHeight() + height
+	k.SetAuction(ctx, name, auction)
+}
+
+// Get an iterator over all names in which the keys are the names and the values are the auction
+func (k Keeper) GetAuctionNamesIterator(ctx sdk.Context) sdk.Iterator {
+	store := ctx.KVStore(k.storeMarketKey)
 	return sdk.KVStorePrefixIterator(store, []byte{})
 }

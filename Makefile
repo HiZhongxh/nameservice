@@ -12,15 +12,34 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=NameService \
 BUILD_FLAGS := -ldflags '$(ldflags)'
 
 include Makefile.ledger
-all: install
+all: build
+
+build: go.sum
+	go build -mod=readonly $(BUILD_FLAGS) -o build/nsd ./cmd/nsd
+	go build -mod=readonly $(BUILD_FLAGS) -o build/nscli ./cmd/nscli
 
 install: go.sum
-		go install -mod=readonly $(BUILD_FLAGS) ./cmd/nsd
-		go install -mod=readonly $(BUILD_FLAGS) ./cmd/nscli
+	go install -mod=readonly $(BUILD_FLAGS) ./cmd/nsd
+	go install -mod=readonly $(BUILD_FLAGS) ./cmd/nscli
 
 go.sum: go.mod
-		@echo "--> Ensure dependencies have not been modified"
-		GO111MODULE=on go mod verify
+	@echo "--> Ensure dependencies have not been modified"
+	GO111MODULE=on go mod verify
+
+build-linux: go.sum
+    LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build
+
+build-docker-nsdnode:
+	$(MAKE) -C networks/local
+
+# Stop testnet
+localnet-stop:
+	docker-compose down
+
+# Run a 4-node testnet locally
+localnet-start: build-linux localnet-stop
+	@if ! [ -f build/node0/nsd/config/genesis.json ]; then docker run -d -v $(CURDIR)/build:/nsd:Z tendermint/nsdnode -o 127.0.0.1; fi
+	docker-compose up -d
 
 test:
 	@go test -mod=readonly $(PACKAGES)

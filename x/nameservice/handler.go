@@ -15,6 +15,10 @@ func NewHandler(keeper Keeper) sdk.Handler {
 			return handleMsgSetName(ctx, keeper, msg)
 		case MsgBuyName:
 			return handleMsgBuyName(ctx, keeper, msg)
+		case MsgDeleteName:
+			return handleMsgDeleteName(ctx, keeper, msg)
+		case MsgAuctionName:
+			return handleMsgAuctionName(ctx, keeper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized nameservice Msg type: %v", msg.Type())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -50,4 +54,22 @@ func handleMsgBuyName(ctx sdk.Context, keeper Keeper, msg types.MsgBuyName) sdk.
 	keeper.SetOwner(ctx, msg.Name, msg.Buyer)
 	keeper.SetPrice(ctx, msg.Name, msg.Bid)
 	return sdk.Result{}
+}
+
+// Handle a message to delete name
+func handleMsgDeleteName(ctx sdk.Context, keeper Keeper, msg types.MsgDeleteName) sdk.Result {
+	if !msg.Owner.Equals(keeper.GetOwner(ctx, msg.Name)) { // Checks if the the msg sender is the same as the current owner
+		return sdk.ErrUnauthorized("Incorrect Owner").Result() // If not, throw an error
+	}
+	keeper.DeleteWhois(ctx, msg.Name) // If so, delete the entire Whois metadata struct for a name
+	return sdk.Result{} // return
+}
+
+// Handle a message to auction name
+func handleMsgAuctionName(ctx sdk.Context, keeper Keeper, msg types.MsgAuctionName) sdk.Result {
+	if !msg.Auctor.Equals(keeper.GetOwner(ctx, msg.Name)) { // Checks if the the msg sender is the same as the current owner
+		return sdk.ErrUnauthorized("Incorrect Owner").Result() // If not, throw an error
+	}
+	keeper.NewAuction(ctx, msg.Name, msg.Auctor, msg.StartingPrice, msg.DeadHeight)
+	return sdk.Result{} // return
 }

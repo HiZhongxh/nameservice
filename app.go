@@ -105,7 +105,7 @@ func NewNameServiceApp(
 	bApp.SetAppVersion(version.Version)
 
 	keys := sdk.NewKVStoreKeys(bam.MainStoreKey, auth.StoreKey, staking.StoreKey,
-		supply.StoreKey, distr.StoreKey, slashing.StoreKey, params.StoreKey, nameservice.StoreKey)
+		supply.StoreKey, distr.StoreKey, slashing.StoreKey, params.StoreKey, nameservice.StoreKey, nameservice.StoreMarketKey)
 
 	tkeys := sdk.NewTransientStoreKeys(staking.TStoreKey, params.TStoreKey)
 
@@ -193,6 +193,7 @@ func NewNameServiceApp(
 	app.nsKeeper = nameservice.NewKeeper(
 		app.bankKeeper,
 		keys[nameservice.StoreKey],
+		keys[nameservice.StoreMarketKey],
 		app.cdc,
 	)
 

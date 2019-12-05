@@ -1,0 +1,47 @@
+version: '3'
+
+services:
+  nsdnode0:
+    container_name: nsdnode0
+    image: "tendermint/nsdnode"
+    ports:
+      - "26656-26657:26656-26657"
+    environment:
+      - ID=0
+      - LOG=${LOG:-nsd.log}
+    volumes:
+      - ./build:/nsd:Z
+
+  nsdnode1:
+    container_name: nsdnode1
+    image: "tendermint/nsdnode"
+    ports:
+      - "26659-26660:26656-26657"
+    environment:
+      - ID=1
+      - LOG=${LOG:-nsd.log}
+    volumes:
+      - ./build:/nsd:Z
+
+  nsdnode2:
+    container_name: nsdnode2
+    image: "tendermint/nsdnode"
+    environment:
+      - ID=2
+      - LOG=${LOG:-nsd.log}
+    ports:
+      - "26661-26662:26656-26657"
+    volumes:
+      - ./build:/nsd:Z
+
+  nsdnode3:
+    container_name: nsdnode3
+    image: "tendermint/nsdnode"
+    environment:
+      - ID=3
+      - LOG=${LOG:-nsd.log}
+    ports:
+      - "26663-26664:26656-26657"
+    volumes:
+      - ./build:/nsd:Z
+
