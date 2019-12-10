@@ -25,8 +25,10 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	nameserviceTxCmd.AddCommand(client.PostCommands(
 		GetCmdBuyName(cdc),
 		GetCmdSetName(cdc),
-		GetCmdDeleteName(cdc),
+		//GetCmdDeleteName(cdc),
 		GetCmdAuctionName(cdc),
+		GetCmdAuctionBid(cdc),
+		GetCmdAuctionReveal(cdc),
 	)...)
 
 	return nameserviceTxCmd
@@ -113,18 +115,68 @@ func GetCmdAuctionName(cdc *codec.Codec) *cobra.Command {
 
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 
-			owner := args[0]
+			name := args[0]
 			startingPrice, err := sdk.ParseCoins(args[1])
 			if err != nil {
 				return err
 			}
-			duration, err := strconv.ParseInt(args[2], 10, 8)
+			duration, err := strconv.ParseInt(args[2], 10, 64)
 			if err != nil {
 				return err
 			}
 
-			msg := types.NewMsgAuctionName(owner, startingPrice, duration, cliCtx.GetFromAddress())
+			msg := types.NewMsgAuctionName(name, startingPrice, duration, cliCtx.GetFromAddress())
 			err = msg.ValidateBasic()
+			if err != nil {
+				return err
+			}
+
+			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
+		},
+	}
+}
+
+func GetCmdAuctionBid(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "auction-bid [name] [price]",
+		Short: "bid in name auction",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
+
+			name := args[0]
+			bid, err := sdk.ParseCoins(args[1])
+			if err != nil {
+				return err
+			}
+
+			msg := types.NewMsgAuctionBid(name, bid, cliCtx.GetFromAddress())
+			err = msg.ValidateBasic()
+			if err != nil {
+				return err
+			}
+
+			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
+		},
+	}
+}
+
+func GetCmdAuctionReveal(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "auction-reveal [name]",
+		Short: "reveal name auction that you own",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
+
+			name := args[0]
+
+			msg := types.NewMsgAuctionReveal(name, cliCtx.GetFromAddress())
+			err := msg.ValidateBasic()
 			if err != nil {
 				return err
 			}

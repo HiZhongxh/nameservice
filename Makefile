@@ -26,6 +26,10 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
+proto:
+	@echo "\033[;32mbuild protobuf file \033[0m"
+	make -C x/nameservice/internal/types/pb
+
 build-linux: go.sum
     LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build
 

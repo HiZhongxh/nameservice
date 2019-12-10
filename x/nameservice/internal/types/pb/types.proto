@@ -1,0 +1,35 @@
+// Copyright 2019 The nameservice Authors
+// This file is part of the nameservice library.
+//
+// The nameservice library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The nameservice is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the nameservice library. If not, see <http://www.gnu.org/licenses/>.
+
+syntax = "proto3";
+package pb;
+
+/*
+*   Bid struct
+*/
+message Bid {
+    string  Bid     = 1;
+}
+
+/*
+*   auction struct
+*/
+message Auction {
+    bytes               Auctor          = 1;
+    string              StartingPrice   = 2;
+    int64               DeadHeight      = 3;
+    map<string, Bid>    Bids            = 4;
+}

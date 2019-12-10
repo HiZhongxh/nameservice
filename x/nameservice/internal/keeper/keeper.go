@@ -107,7 +107,18 @@ func (k Keeper) SetAuction(ctx sdk.Context, name string, auction types.Auction) 
 		return
 	}
 	store := ctx.KVStore(k.storeMarketKey)
-	store.Set([]byte(name), k.cdc.MustMarshalBinaryBare(auction))
+	// done to use protobuf to marshal Auction struct, although it need many coding
+	//bz ,err := auction.Serialize()
+	//if err != nil {
+	//	return
+	//}
+	//store.Set([]byte(name), bz)
+
+	// MustMarshalBinaryBare can not marshal map struct
+	//store.Set([]byte(name), k.cdc.MustMarshalBinaryBare(auction))
+
+	// MustMarshalJSON can marshal map struct, although it is not tight
+	store.Set([]byte(name), k.cdc.MustMarshalJSON(auction))
 }
 
 // Delete the entire Auction metadata struct for a name
@@ -124,7 +135,12 @@ func (k Keeper) GetAuction(ctx sdk.Context, name string) types.Auction {
 	}
 	bz := store.Get([]byte(name))
 	var auction types.Auction
-	k.cdc.MustUnmarshalBinaryBare(bz, &auction)
+
+	//k.cdc.MustUnmarshalBinaryBare(bz, &auction)
+
+	//auction.Deserialize(bz)
+
+	k.cdc.MustUnmarshalJSON(bz, &auction)
 	return auction
 }
 
@@ -133,6 +149,7 @@ func (k Keeper) NewAuction(ctx sdk.Context, name string, auctor sdk.AccAddress, 
 	auction.Auctor = auctor
 	auction.StartingPrice = startingPrice
 	auction.DeadHeight = ctx.BlockHeight() + height
+	auction.Bids = make(map[string] types.Bid)
 	k.SetAuction(ctx, name, auction)
 }
 
@@ -140,4 +157,52 @@ func (k Keeper) NewAuction(ctx sdk.Context, name string, auctor sdk.AccAddress, 
 func (k Keeper) GetAuctionNamesIterator(ctx sdk.Context) sdk.Iterator {
 	store := ctx.KVStore(k.storeMarketKey)
 	return sdk.KVStorePrefixIterator(store, []byte{})
+}
+
+func (k Keeper) HasAuctor(ctx sdk.Context, name string) bool {
+	auction := k.GetAuction(ctx, name)
+	return !auction.Auctor.Empty()
+}
+
+func (k Keeper) GetAuctor(ctx sdk.Context, name string) sdk.AccAddress {
+	return k.GetAuction(ctx, name).Auctor
+}
+
+func (k Keeper) GetAuctionStartingPrice(ctx sdk.Context, name string) sdk.Coins {
+	return k.GetAuction(ctx, name).StartingPrice
+}
+
+func (k Keeper) GetValidateHeight(ctx sdk.Context, name string) int64 {
+	return k.GetAuction(ctx, name).DeadHeight
+}
+
+func (k Keeper) GetAuctionResult(ctx sdk.Context, name string) (sdk.AccAddress, sdk.Coins) {
+	auction := k.GetAuction(ctx, name)
+
+	var higestBid sdk.Coins = types.MinNamePrice
+	var winner sdk.AccAddress
+	for acc, b := range auction.Bids {
+		if b.Bid.IsAllGT(higestBid) {
+			higestBid = b.Bid
+			winner = sdk.AccAddress(acc)
+		}
+	}
+
+	return winner, higestBid
+}
+
+func (k Keeper) GetAuctionBids(ctx sdk.Context, name string) map[string]types.Bid {
+	return k.GetAuction(ctx, name).Bids
+}
+
+func (k Keeper) SetAuctionBid(ctx sdk.Context, name string, bidder sdk.AccAddress, bid sdk.Coins) {
+	auction := k.GetAuction(ctx, name)
+	if auction.Bids == nil {
+		auction.Bids = make(map[string] types.Bid)
+	}
+	b := types.Bid{
+		Bid:	bid,
+	}
+	auction.Bids[bidder.String()] = b
+	k.SetAuction(ctx, name, auction)
 }

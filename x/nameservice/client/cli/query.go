@@ -22,6 +22,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 		GetCmdResolveName(storeKey, cdc),
 		GetCmdWhois(storeKey, cdc),
 		GetCmdNames(storeKey, cdc),
+		GetCmdAuction(storeKey, cdc),
 		GetCmdAuctionNames(storeKey, cdc),
 	)...)
 	return nameserviceQueryCmd
@@ -111,6 +112,29 @@ func GetCmdAuctionNames(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			}
 
 			var out types.QueryResNames
+			cdc.MustUnmarshalJSON(res, &out)
+			return cliCtx.PrintOutput(out)
+		},
+	}
+}
+
+// GetCmdAuction queries information about a domain auction
+func GetCmdAuction(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "auction [name]",
+		Short: "Query auction info of name",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			name := args[0]
+
+			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/auction/%s", queryRoute, name), nil)
+			if err != nil {
+				fmt.Printf("could not resolve auction - %s \n", string(name))
+				return nil
+			}
+
+			var out types.Auction
 			cdc.MustUnmarshalJSON(res, &out)
 			return cliCtx.PrintOutput(out)
 		},

@@ -29,6 +29,8 @@ type (
 	MsgBuyName      = types.MsgBuyName
 	MsgDeleteName   = types.MsgDeleteName
 	MsgAuctionName  = types.MsgAuctionName
+	MsgAuctionBid  	= types.MsgAuctionBid
+	MsgAuctionReveal = types.MsgAuctionReveal
 	QueryResResolve = types.QueryResResolve
 	QueryResNames   = types.QueryResNames
 	Whois           = types.Whois

@@ -13,6 +13,7 @@ const (
 	QueryResolve = "resolve"
 	QueryWhois   = "whois"
 	QueryNames   = "names"
+	QueryAuction = "auction"
 	QueryAuctionNames = "auctionnames"
 )
 
@@ -26,6 +27,8 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 			return queryWhois(ctx, path[1:], req, keeper)
 		case QueryNames:
 			return queryNames(ctx, req, keeper)
+		case QueryAuction:
+			return queryAuction(ctx, path[1:], req, keeper)
 		case QueryAuctionNames:
 			return queryAuctionNames(ctx, req, keeper)
 		default:
@@ -78,6 +81,19 @@ func queryNames(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (res []by
 	}
 
 	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, namesList)
+	if err2 != nil {
+		panic("could not marshal result to JSON")
+	}
+
+	return bz, nil
+}
+
+// nolint: unparam
+func queryAuction(ctx sdk.Context, path []string, req abci.RequestQuery, keeper Keeper) (res []byte, err sdk.Error) {
+	name := path[0]
+
+	auction := keeper.GetAuction(ctx, name)
+	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, auction)
 	if err2 != nil {
 		panic("could not marshal result to JSON")
 	}
