@@ -184,11 +184,25 @@ func (k Keeper) GetAuctionResult(ctx sdk.Context, name string) (sdk.AccAddress, 
 	for acc, b := range auction.Bids {
 		if b.Bid.IsAllGT(higestBid) {
 			higestBid = b.Bid
-			winner = sdk.AccAddress(acc)
+			winner, _ = sdk.AccAddressFromBech32(acc)
 		}
 	}
 
 	return winner, higestBid
+}
+
+func (k Keeper) DelAuctionBid(ctx sdk.Context, name string, bidder sdk.AccAddress) {
+	auction := k.GetAuction(ctx, name)
+	delete(auction.Bids, bidder.String())
+	k.SetAuction(ctx, name, auction)
+}
+
+func (k Keeper) GetAuctionBid(ctx sdk.Context, name string, bidder sdk.AccAddress) *types.Bid {
+	if v, ok := k.GetAuction(ctx, name).Bids[bidder.String()]; ok {
+		return &v
+	} else {
+		return nil
+	}
 }
 
 func (k Keeper) GetAuctionBids(ctx sdk.Context, name string) map[string]types.Bid {
@@ -197,9 +211,6 @@ func (k Keeper) GetAuctionBids(ctx sdk.Context, name string) map[string]types.Bi
 
 func (k Keeper) SetAuctionBid(ctx sdk.Context, name string, bidder sdk.AccAddress, bid sdk.Coins) {
 	auction := k.GetAuction(ctx, name)
-	if auction.Bids == nil {
-		auction.Bids = make(map[string] types.Bid)
-	}
 	b := types.Bid{
 		Bid:	bid,
 	}

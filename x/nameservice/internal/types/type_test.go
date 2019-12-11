@@ -34,3 +34,26 @@ func TestEnDecode(t *testing.T) {
 	fmt.Println(dauction.String())
 	//require.Equal(t, auction, dauction)
 }
+
+
+type Students struct {
+	students 	map[int]string
+}
+
+func (s Students) GetMap() map[int]string {
+	return s.students
+}
+
+func TestMap(t *testing.T) {
+	stu := Students{
+		students:	make(map[int]string),
+	}
+
+	stu.students[0] = "xiao"
+	stu.students[1] = "hong"
+
+	stu1 := stu.GetMap()
+	for _, v := range stu1 {
+		fmt.Println("",  v)
+	}
+}

@@ -89,7 +89,6 @@ func handleMsgAuctionBid(ctx sdk.Context, keeper Keeper, msg types.MsgAuctionBid
 	currentHeight := ctx.BlockHeight()
 	validateHeight := keeper.GetValidateHeight(ctx, msg.Name)
 	if currentHeight > validateHeight {
-		fmt.Println("The auction is not existed or invalidated")
 		return sdk.ErrUnauthorized("The auction is not existed or invalidated").Result() // If not, throw an error
 	}
 
@@ -100,8 +99,25 @@ func handleMsgAuctionBid(ctx sdk.Context, keeper Keeper, msg types.MsgAuctionBid
 	if keeper.GetAuctionStartingPrice(ctx, msg.Name).IsAllGTE(msg.Bid) { // Checks if the the bid price is greater than the price paid by the current owner
 		return sdk.ErrInsufficientCoins("Bid is less than starting price").Result() // If not, throw an error
 	}
+
+	var hadPay sdk.Coins
+	var err bool
+	oldBid := keeper.GetAuctionBid(ctx, msg.Name, msg.Buyer)
+	if oldBid == nil {
+		hadPay = msg.Bid
+	} else {
+		if oldBid.Bid.IsAllGTE(msg.Bid) { // Checks if the the bid price is greater than the price paid by the current owner
+			return sdk.ErrInsufficientCoins("Bid is less than previous price").Result() // If not, throw an error
+		}
+
+		hadPay, err = msg.Bid.SafeSub(oldBid.Bid)
+		if err != false {
+			return sdk.ErrInsufficientCoins("safe sub failed when calculate expense").Result() // If not, throw an error
+		}
+	}
+
 	if keeper.HasAuctor(ctx, msg.Name) {
-		_, err := keeper.CoinKeeper.SubtractCoins(ctx, msg.Buyer, msg.Bid) // If so, deduct the Bid amount from the sender
+		_, err := keeper.CoinKeeper.SubtractCoins(ctx, msg.Buyer, hadPay) // If so, deduct the Bid amount from the sender
 		if err != nil {
 			return sdk.ErrInsufficientCoins("Buyer does not have enough coins").Result()
 		}
@@ -127,19 +143,21 @@ func handleMsgAuctionReveal(ctx sdk.Context, keeper Keeper, msg types.MsgAuction
 	if currentHeight < validateHeight {
 		return sdk.ErrUnauthorized("The auction is still aucting").Result() // If not, throw an error
 	}
-
 	winner, bid := keeper.GetAuctionResult(ctx, msg.Name)
 	if !winner.Empty() {
 		keeper.CoinKeeper.AddCoins(ctx, auctor, bid)
 		bids := keeper.GetAuctionBids(ctx, msg.Name)
 		for acc, b := range bids {
-			bidder := sdk.AccAddress(acc)
+			bidder, _ := sdk.AccAddressFromBech32(acc)
+			fmt.Println("bidder: ", bidder)
 			if !bidder.Equals(winner) {
 				keeper.CoinKeeper.AddCoins(ctx, bidder, b.Bid)
 			}
 		}
 	}
 
+	keeper.SetOwner(ctx, msg.Name, winner)
+	keeper.SetPrice(ctx, msg.Name, bid)
 	keeper.DeleteAuction(ctx, msg.Name)
 	return sdk.Result{} // return
 }
