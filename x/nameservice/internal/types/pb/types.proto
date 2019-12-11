@@ -21,7 +21,8 @@ package pb;
 *   Bid struct
 */
 message Bid {
-    string  Bid     = 1;
+    string  Bidder  = 1;
+    string  Bid     = 2;
 }
 
 /*
@@ -31,5 +32,5 @@ message Auction {
     bytes               Auctor          = 1;
     string              StartingPrice   = 2;
     int64               DeadHeight      = 3;
-    map<string, Bid>    Bids            = 4;
+    repeated Bid        Bids            = 4;
 }

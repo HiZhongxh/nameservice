@@ -1,8 +1,6 @@
 package nameservice
 
 import (
-	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/HiZhongxh/nameservice/x/nameservice/internal/types"
 )
@@ -149,7 +147,6 @@ func handleMsgAuctionReveal(ctx sdk.Context, keeper Keeper, msg types.MsgAuction
 		bids := keeper.GetAuctionBids(ctx, msg.Name)
 		for acc, b := range bids {
 			bidder, _ := sdk.AccAddressFromBech32(acc)
-			fmt.Println("bidder: ", bidder)
 			if !bidder.Equals(winner) {
 				keeper.CoinKeeper.AddCoins(ctx, bidder, b.Bid)
 			}

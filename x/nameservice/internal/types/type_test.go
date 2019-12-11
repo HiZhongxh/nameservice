@@ -9,9 +9,13 @@ import (
 func TestEnDecode(t *testing.T) {
 	jack := sdk.AccAddress("cosmos13pnn6qmhms2e08kajtpv3qzjjvwq3kkyg2r6y7")
 	alice := sdk.AccAddress("cosmos19dn5f6ewn404umhxlf58y0wnruu38zmwnwzztt")
+	bob := sdk.AccAddress("cosmos15gy4j083cq9y4z7mcsg7rdm33zd482sdfqnmta")
 	bids := make(map[string]Bid)
 	bids[string(alice)] = Bid{
 		Bid:	sdk.Coins{sdk.NewCoin("test", sdk.NewInt(15))},
+	}
+	bids[string(bob)] = Bid{
+		Bid:	sdk.Coins{sdk.NewCoin("test", sdk.NewInt(25))},
 	}
 	auction := Auction{
 		Auctor:			jack,

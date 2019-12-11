@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"strings"
 	"fmt"
+	"sort"
 	"errors"
 	"github.com/HiZhongxh/nameservice/x/nameservice/internal/types/pb"
 	"github.com/gogo/protobuf/proto"
@@ -55,24 +56,25 @@ func (a Auction) proto() (pb.Auction, error) {
 	var pbAuction pb.Auction
 	// map is stored randomly, if consistency is needed(eg: clone state), we should sort firstly
 	// but we don't need yet
-	//var keysBid []string
-	//for k := range a.Bids {
-	//	keysBid = append(keysBid, k)
-	//}
-	//sort.Strings(keysBid)
-	//for _, k := range keysBid {
-	//	bid := pb.Bid{
-	//		Bid:	a.Bids[k].Bid.String(),
-	//	}
-	//	pbAuction.Bids = append(pbAuction.Bids, &bid)
-	//}
-	pbAuction.Bids = make(map[string]*pb.Bid)
-	for k, v := range a.Bids {
-		b := pb.Bid{
-			Bid: v.Bid.String(),
-		}
-		pbAuction.Bids[k] = &b
+	var keysBid []string
+	for k := range a.Bids {
+		keysBid = append(keysBid, k)
 	}
+	sort.Strings(keysBid)
+	for _, k := range keysBid {
+		bid := pb.Bid{
+			Bidder:	k,
+			Bid:	a.Bids[k].Bid.String(),
+		}
+		pbAuction.Bids = append(pbAuction.Bids, &bid)
+	}
+	//pbAuction.Bids = make(map[string]*pb.Bid)
+	//for k, v := range a.Bids {
+	//	b := pb.Bid{
+	//		Bid: v.Bid.String(),
+	//	}
+	//	pbAuction.Bids[k] = &b
+	//}
 
 	pbAuction.Auctor = a.Auctor
 	pbAuction.StartingPrice = a.StartingPrice.String()
@@ -111,23 +113,23 @@ func (a *Auction) Deserialize(data []byte) error {
 	}
 	a.DeadHeight = pbAuction.DeadHeight
 	a.Bids = make(map[string]Bid)
-	//for _, b := range pbAuction.Bids {
-	//	var bid Bid
-	//	bid.Bid, err = sdk.ParseCoins(b.Bid)
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	a.Bids[string(b.Bidder)] = bid
-	//}
-	for k, v := range pbAuction.Bids {
+	for _, b := range pbAuction.Bids {
 		var bid Bid
-		bid.Bid, err = sdk.ParseCoins(v.Bid)
+		bid.Bid, err = sdk.ParseCoins(b.Bid)
 		if err != nil {
 			return err
 		}
-		a.Bids[k] = bid
+
+		a.Bids[b.Bidder] = bid
 	}
+	//for k, v := range pbAuction.Bids {
+	//	var bid Bid
+	//	bid.Bid, err = sdk.ParseCoins(v.Bid)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	a.Bids[k] = bid
+	//}
 
 	return nil
 }

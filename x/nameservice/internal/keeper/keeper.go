@@ -108,17 +108,17 @@ func (k Keeper) SetAuction(ctx sdk.Context, name string, auction types.Auction) 
 	}
 	store := ctx.KVStore(k.storeMarketKey)
 	// done to use protobuf to marshal Auction struct, although it need many coding
-	//bz ,err := auction.Serialize()
-	//if err != nil {
-	//	return
-	//}
-	//store.Set([]byte(name), bz)
+	bz ,err := auction.Serialize()
+	if err != nil {
+		return
+	}
+	store.Set([]byte(name), bz)
 
 	// MustMarshalBinaryBare can not marshal map struct
 	//store.Set([]byte(name), k.cdc.MustMarshalBinaryBare(auction))
 
 	// MustMarshalJSON can marshal map struct, although it is not tight
-	store.Set([]byte(name), k.cdc.MustMarshalJSON(auction))
+	//store.Set([]byte(name), k.cdc.MustMarshalJSON(auction))
 }
 
 // Delete the entire Auction metadata struct for a name
@@ -138,9 +138,9 @@ func (k Keeper) GetAuction(ctx sdk.Context, name string) types.Auction {
 
 	//k.cdc.MustUnmarshalBinaryBare(bz, &auction)
 
-	//auction.Deserialize(bz)
+	auction.Deserialize(bz)
 
-	k.cdc.MustUnmarshalJSON(bz, &auction)
+	//k.cdc.MustUnmarshalJSON(bz, &auction)
 	return auction
 }
 
