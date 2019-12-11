@@ -1,6 +1,7 @@
 package nameservice
 
 import (
+	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/HiZhongxh/nameservice/x/nameservice/internal/types"
 )

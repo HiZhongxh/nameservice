@@ -12,7 +12,7 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=NameService \
 BUILD_FLAGS := -ldflags '$(ldflags)'
 
 include Makefile.ledger
-all: build
+all: proto install
 
 build: go.sum
 	go build -mod=readonly $(BUILD_FLAGS) -o build/nsd ./cmd/nsd
